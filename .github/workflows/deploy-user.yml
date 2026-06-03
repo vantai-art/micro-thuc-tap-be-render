@@ -1,0 +1,22 @@
+name: Deploy User Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'user-service/**'
+      - '.github/workflows/deploy-user.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy User Service to Fly.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --remote-only --config fly.toml
+        working-directory: ./user-service
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

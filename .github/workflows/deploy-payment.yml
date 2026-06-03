@@ -1,0 +1,22 @@
+name: Deploy Payment Service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'payment-service/**'
+      - '.github/workflows/deploy-payment.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --remote-only --config fly.toml
+        working-directory: ./payment-service
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

@@ -1,0 +1,279 @@
+version: "3.9"
+
+# ============================================================
+#  E-COMMERCE MICROSERVICES — DOCKER COMPOSE
+#  Thứ tự: mysql → redis → eureka → services → api-gateway
+# ============================================================
+
+networks:
+  ecom-net:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  product-uploads:
+
+services:
+
+  # ─────────────────────────────────────────
+  #  INFRASTRUCTURE
+  # ─────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ecom-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ""
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - ecom-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecom-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - ecom-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─────────────────────────────────────────
+  #  1. EUREKA SERVER
+  # ─────────────────────────────────────────
+  eureka-server:
+    build:
+      context: ./eureka-server
+    container_name: ecom-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    networks:
+      - ecom-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 90s
+
+  # ─────────────────────────────────────────
+  #  2. USER SERVICE
+  # ─────────────────────────────────────────
+  user-service:
+    build:
+      context: ./user-service
+    container_name: ecom-user
+    restart: unless-stopped
+    ports:
+      - "8811:8811"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/users?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ""
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: user-service
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+    networks:
+      - ecom-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  #  3. PRODUCT CATALOG SERVICE
+  # ─────────────────────────────────────────
+  product-catalog-service:
+    build:
+      context: ./product-catalog-service
+    container_name: ecom-product-catalog
+    restart: unless-stopped
+    ports:
+      - "8810:8810"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/product_catalog?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ""
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: product-catalog-service
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      APP_BASE_URL: http://localhost:8810
+    volumes:
+      - product-uploads:/app/uploads
+    networks:
+      - ecom-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  #  4. PRODUCT RECOMMENDATION SERVICE
+  # ─────────────────────────────────────────
+  product-recommendation-service:
+    build:
+      context: ./product-recommendation-service
+    container_name: ecom-recommendation
+    restart: unless-stopped
+    ports:
+      - "8812:8812"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/recommendation_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ""
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: product-recommendation-service
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+    networks:
+      - ecom-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  #  5. ORDER SERVICE
+  # ─────────────────────────────────────────
+  order-service:
+    build:
+      context: ./order-service
+    container_name: ecom-order
+    restart: unless-stopped
+    ports:
+      - "8813:8813"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/orders_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_SESSION_STORE_TYPE: none
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: order-service
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+    networks:
+      - ecom-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  #  6. PAYMENT SERVICE
+  # ─────────────────────────────────────────
+  payment-service:
+    build:
+      context: ./payment-service
+    container_name: ecom-payment
+    restart: unless-stopped
+    ports:
+      - "8819:8819"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/payment_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ""
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: payment-service
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+    networks:
+      - ecom-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  #  7. SETTING SERVICE
+  # ─────────────────────────────────────────
+  setting-service:
+    build:
+      context: ./setting-service
+    container_name: ecom-setting
+    restart: unless-stopped
+    ports:
+      - "8816:8816"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/settings_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ""
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: setting-service
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+    networks:
+      - ecom-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+
+  # ─────────────────────────────────────────
+  #  8. SOCKET SERVER (Node.js)
+  # ─────────────────────────────────────────
+  socket-server:
+    build:
+      context: ./socket-server
+    container_name: ecom-socket
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - ecom-net
+
+  # ─────────────────────────────────────────
+  #  9. API GATEWAY — chạy CUỐI CÙNG
+  # ─────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: ecom-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "false"
+      SERVER_PORT: "8080"
+    networks:
+      - ecom-net
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      product-catalog-service:
+        condition: service_started
+      product-recommendation-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      setting-service:
+        condition: service_started

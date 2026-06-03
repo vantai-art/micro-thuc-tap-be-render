@@ -1,0 +1,22 @@
+name: Deploy API Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api-gateway/**'
+      - '.github/workflows/deploy-api-gateway.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy API Gateway to Fly.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --remote-only --config fly.toml
+        working-directory: ./api-gateway
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

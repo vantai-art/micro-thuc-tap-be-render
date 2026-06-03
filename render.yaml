@@ -1,0 +1,311 @@
+# ============================================================
+# render.yaml — Deploy e-commerce microservices lên Render
+# ============================================================
+# Hướng dẫn:
+#   1. Đặt file này vào thư mục gốc của repo
+#   2. Kết nối repo GitHub với Render
+#   3. Render sẽ tự detect và tạo các service
+#   4. Set các biến môi trường SECRET trong Render Dashboard
+# ============================================================
+
+services:
+
+  # ─────────────────────────────────────────────
+  # 1. EUREKA SERVER  (deploy trước tiên!)
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-eureka
+    runtime: docker
+    dockerfilePath: ./eureka-server/Dockerfile
+    dockerContext: ./eureka-server
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8761"
+      - key: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+        value: "false"
+      - key: EUREKA_CLIENT_FETCH_REGISTRY
+        value: "false"
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 2. API GATEWAY
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-api-gateway
+    runtime: docker
+    dockerfilePath: ./api-gateway/Dockerfile
+    dockerContext: ./api-gateway
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8080"
+      - key: SPRING_APPLICATION_NAME
+        value: "api-gateway"
+      - key: SPRING_SESSION_STORE_TYPE
+        value: "none"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-api-gateway.onrender.com"
+      # ⚠️ Set trong Render Dashboard → Environment
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        sync: false   # secret — set manually
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 3. USER SERVICE
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-user-service
+    runtime: docker
+    dockerfilePath: ./user-service/Dockerfile
+    dockerContext: ./user-service
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8811"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-user-service.onrender.com"
+      - key: APP_FRONTEND_URL
+        value: "https://YOUR_FRONTEND_URL"   # ← thay URL frontend thật
+      - key: APP_RESET_TOKEN_EXPIRY_MINUTES
+        value: "15"
+      - key: SPRING_MAIL_HOST
+        value: "smtp.gmail.com"
+      - key: SPRING_MAIL_PORT
+        value: "587"
+      - key: SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH
+        value: "true"
+      - key: SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE
+        value: "true"
+      # ⚠️ Secrets — set trong Render Dashboard
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        sync: false
+      - key: SPRING_MAIL_USERNAME
+        sync: false
+      - key: SPRING_MAIL_PASSWORD
+        sync: false
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 4. PRODUCT CATALOG SERVICE
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-product-catalog
+    runtime: docker
+    dockerfilePath: ./product-catalog-service/Dockerfile
+    dockerContext: ./product-catalog-service
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8810"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-product-catalog.onrender.com"
+      - key: APP_UPLOAD_DIR
+        value: "./uploads"
+      - key: APP_BASE_URL
+        value: "https://ecom-product-catalog.onrender.com"
+      - key: SPRING_SERVLET_MULTIPART_ENABLED
+        value: "true"
+      - key: SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE
+        value: "5MB"
+      - key: SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE
+        value: "6MB"
+      # ⚠️ Secrets
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+        sync: false
+    healthCheckPath: /actuator/health
+    # ⚠️ Lưu ý: Render free tier KHÔNG có persistent disk
+    # Upload ảnh sẽ mất khi redeploy → nên dùng Cloudinary hoặc S3
+
+  # ─────────────────────────────────────────────
+  # 5. PRODUCT RECOMMENDATION SERVICE
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-recommendation
+    runtime: docker
+    dockerfilePath: ./product-recommendation-service/Dockerfile
+    dockerContext: ./product-recommendation-service
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8812"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-recommendation.onrender.com"
+      # ⚠️ Secrets
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+        sync: false
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 6. ORDER SERVICE
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-order-service
+    runtime: docker
+    dockerfilePath: ./order-service/Dockerfile
+    dockerContext: ./order-service
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8813"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-order-service.onrender.com"
+      - key: SPRING_SESSION_STORE_TYPE
+        value: "none"
+      - key: SPRING_DATA_REDIS_PORT
+        value: "6379"
+      # ⚠️ Secrets
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+        sync: false
+      - key: SPRING_DATA_REDIS_HOST
+        sync: false
+      - key: SPRING_DATA_REDIS_PASSWORD
+        sync: false
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 7. PAYMENT SERVICE
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-payment-service
+    runtime: docker
+    dockerfilePath: ./payment-service/Dockerfile
+    dockerContext: ./payment-service
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8819"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-payment-service.onrender.com"
+      - key: VNPAY_URL
+        value: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"
+      - key: VNPAY_RETURN_URL
+        value: "https://ecom-api-gateway.onrender.com/api/payments/vnpay/return"
+      - key: VNPAY_FRONTEND_SUCCESS_URL
+        value: "https://YOUR_FRONTEND_URL/checkout"   # ← thay URL thật
+      - key: VNPAY_FRONTEND_FAIL_URL
+        value: "https://YOUR_FRONTEND_URL/checkout"   # ← thay URL thật
+      # ⚠️ Secrets
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+        sync: false
+      - key: VNPAY_TMN_CODE
+        sync: false
+      - key: VNPAY_HASH_SECRET
+        sync: false
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 8. SETTING SERVICE
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-setting-service
+    runtime: docker
+    dockerfilePath: ./setting-service/Dockerfile
+    dockerContext: ./setting-service
+    plan: free
+    region: singapore
+    envVars:
+      - key: SERVER_PORT
+        value: "8816"
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: "update"
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
+        value: "false"
+      - key: EUREKA_INSTANCE_HOSTNAME
+        value: "ecom-setting-service.onrender.com"
+      # ⚠️ Secrets
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        sync: false
+    healthCheckPath: /actuator/health
+
+  # ─────────────────────────────────────────────
+  # 9. SOCKET SERVER (Node.js)
+  # ─────────────────────────────────────────────
+  - type: web
+    name: ecom-socket-server
+    runtime: docker
+    dockerfilePath: ./socket-server/Dockerfile
+    dockerContext: ./socket-server
+    plan: free
+    region: singapore
+    envVars:
+      - key: SOCKET_PORT
+        value: "5000"
+      - key: NODE_ENV
+        value: "production"
+    healthCheckPath: /health
