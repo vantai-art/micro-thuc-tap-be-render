@@ -53,7 +53,6 @@ services:
       # ⚠️ Set trong Render Dashboard → Environment
       - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
         sync: false   # secret — set manually
-    healthCheckPath: /actuator/health
 
   # ─────────────────────────────────────────────
   # 3. USER SERVICE
@@ -105,7 +104,6 @@ services:
         sync: false
       - key: SPRING_MAIL_PASSWORD
         sync: false
-    healthCheckPath: /actuator/health
 
   # ─────────────────────────────────────────────
   # 4. PRODUCT CATALOG SERVICE
@@ -151,7 +149,6 @@ services:
         sync: false
       - key: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
         sync: false
-    healthCheckPath: /actuator/health
     # ⚠️ Lưu ý: Render free tier KHÔNG có persistent disk
     # Upload ảnh sẽ mất khi redeploy → nên dùng Cloudinary hoặc S3
 
@@ -189,7 +186,6 @@ services:
         sync: false
       - key: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
         sync: false
-    healthCheckPath: /actuator/health
 
   # ─────────────────────────────────────────────
   # 6. ORDER SERVICE
@@ -235,7 +231,6 @@ services:
         sync: false
       - key: SPRING_DATA_REDIS_PASSWORD
         sync: false
-    healthCheckPath: /actuator/health
 
   # ─────────────────────────────────────────────
   # 7. PAYMENT SERVICE
@@ -277,7 +272,6 @@ services:
         sync: false
       - key: VNPAY_HASH_SECRET
         sync: false
-    healthCheckPath: /actuator/health
 
   # ─────────────────────────────────────────────
   # 8. SETTING SERVICE
@@ -313,7 +307,6 @@ services:
         sync: false
       - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
         sync: false
-    healthCheckPath: /actuator/health
 
   # ─────────────────────────────────────────────
   # 9. SOCKET SERVER (Node.js)
