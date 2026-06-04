@@ -1,14 +1,15 @@
 #!/bin/sh
 # Chờ Eureka healthy trước khi start service
-# EUREKA_URL phải được set qua env var
 
-EUREKA_HEALTH_URL="${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE%/eureka/}"
-EUREKA_HEALTH_URL="${EUREKA_HEALTH_URL%/eureka}"
-EUREKA_HEALTH_URL="${EUREKA_HEALTH_URL}/actuator/health"
+# Thử cả 2 key env var (tùy service dùng key nào)
+EUREKA_BASE="${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-$EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE}"
+EUREKA_BASE="${EUREKA_BASE%/eureka/}"
+EUREKA_BASE="${EUREKA_BASE%/eureka}"
+EUREKA_HEALTH_URL="${EUREKA_BASE}/actuator/health"
 
 echo "⏳ Chờ Eureka tại: $EUREKA_HEALTH_URL"
 
-MAX_WAIT=180  # chờ tối đa 3 phút
+MAX_WAIT=300  # chờ tối đa 5 phút
 WAITED=0
 INTERVAL=10
 
@@ -27,4 +28,12 @@ if [ $WAITED -ge $MAX_WAIT ]; then
   echo "⚠️ Timeout chờ Eureka, khởi động anyway..."
 fi
 
-exec java -Dserver.port=${PORT:-$DEFAULT_PORT} -jar app.jar
+# JVM options tối ưu cho free tier 512MB RAM
+exec java \
+  -Xms128m \
+  -Xmx384m \
+  -XX:+UseSerialGC \
+  -XX:MaxMetaspaceSize=128m \
+  -Dspring.jpa.properties.hibernate.temp.use_jdbc_metadata_defaults=false \
+  -Dserver.port=${PORT:-$DEFAULT_PORT} \
+  -jar app.jar

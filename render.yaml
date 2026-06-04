@@ -72,6 +72,10 @@ services:
         value: "update"
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "2"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "1"
       - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
         value: "false"
       - key: EUREKA_INSTANCE_HOSTNAME
@@ -120,6 +124,10 @@ services:
         value: "update"
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "2"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "1"
       - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
         value: "false"
       - key: EUREKA_INSTANCE_HOSTNAME
@@ -164,6 +172,10 @@ services:
         value: "update"
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "2"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "1"
       - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
         value: "false"
       - key: EUREKA_INSTANCE_HOSTNAME
@@ -196,6 +208,10 @@ services:
         value: "update"
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "2"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "1"
       - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
         value: "false"
       - key: EUREKA_INSTANCE_HOSTNAME
@@ -204,6 +220,8 @@ services:
         value: "none"
       - key: SPRING_DATA_REDIS_PORT
         value: "6379"
+      - key: SPRING_DATA_REDIS_SSL_ENABLED
+        value: "true"
       # ⚠️ Secrets
       - key: SPRING_DATASOURCE_URL
         sync: false
@@ -278,6 +296,10 @@ services:
         value: "update"
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: "org.hibernate.dialect.PostgreSQLDialect"
+      - key: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+        value: "2"
+      - key: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+        value: "1"
       - key: EUREKA_INSTANCE_PREFER_IP_ADDRESS
         value: "false"
       - key: EUREKA_INSTANCE_HOSTNAME

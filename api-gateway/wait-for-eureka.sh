@@ -1,13 +1,12 @@
 #!/bin/sh
-# API Gateway: chờ Eureka healthy, rồi chờ thêm để các service kịp đăng ký
-
-EUREKA_HEALTH_URL="${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE%/eureka/}"
-EUREKA_HEALTH_URL="${EUREKA_HEALTH_URL%/eureka}"
-EUREKA_HEALTH_URL="${EUREKA_HEALTH_URL}/actuator/health"
+EUREKA_BASE="${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-$EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE}"
+EUREKA_BASE="${EUREKA_BASE%/eureka/}"
+EUREKA_BASE="${EUREKA_BASE%/eureka}"
+EUREKA_HEALTH_URL="${EUREKA_BASE}/actuator/health"
 
 echo "⏳ [API Gateway] Chờ Eureka tại: $EUREKA_HEALTH_URL"
 
-MAX_WAIT=180
+MAX_WAIT=300
 WAITED=0
 INTERVAL=10
 
@@ -22,9 +21,14 @@ while [ $WAITED -lt $MAX_WAIT ]; do
   WAITED=$((WAITED + INTERVAL))
 done
 
-# Chờ thêm 60s để các microservice kịp đăng ký vào Eureka
-echo "⏳ Chờ thêm 60s để các service đăng ký vào Eureka..."
-sleep 60
+echo "⏳ Chờ thêm 90s để các service đăng ký vào Eureka..."
+sleep 90
 
 echo "🚀 Khởi động API Gateway..."
-exec java -Dserver.port=${PORT:-8080} -jar app.jar
+exec java \
+  -Xms128m \
+  -Xmx384m \
+  -XX:+UseSerialGC \
+  -XX:MaxMetaspaceSize=128m \
+  -Dserver.port=${PORT:-8080} \
+  -jar app.jar
